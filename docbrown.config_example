@@ -8,7 +8,9 @@
 			"s3bucket": "s3://test-infomentum",
 			"path": "/etc/infomentum/loadtest/",
 			"s3_encrypt": 0,
-			"docker_container": "infomentum/awscli"
+			"docker_container": "infomentum/awscli",
+			"pre_cmd_trigger": "",
+			"post_cmd_trigger": ""
 		}
 	]
 }
