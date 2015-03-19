@@ -38,7 +38,7 @@ def __checkFileExistence(kFileToCheck):
     import os
     try:
 	    if (not os.path.isfile(kFileToCheck)):
-	        printMsg ("","Oops! Config file missing -> " + kFileToCheck,True)
+	        printMsg ("","###>Oops! Config file missing -> " + kFileToCheck,True)
 	        return False
 	    return True
 
