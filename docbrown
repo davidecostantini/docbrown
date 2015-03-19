@@ -1,0 +1,148 @@
+#!/usr/bin/python
+import sys
+
+__aws_installed=False
+__docker_installed=False
+
+def printMsg(kMsgCod,kMsgDesc,kQuit=False):
+    import sys
+    from datetime import datetime
+    print datetime.now().strftime('%d-%m-%Y %H:%M:%S') + " [" + kMsgCod + "] " + kMsgDesc
+    if kQuit:
+        sys.exit(1)
+
+def __checkFileExistence(kFileToCheck):
+    import os
+    try:
+	    if (not os.path.isfile(kFileToCheck)):
+	        printMsg ("","Oops! Config file missing -> " + kFileToCheck,True)
+	        return False
+	    return True
+
+    except ValueError as e:
+        printMsg ("__checkFileExistence",str(e),True)	    
+
+def loadJsonFile(kFilePath):
+    import json
+    try:
+        if __checkFileExistence(kFilePath):
+            data = json.loads(open(kFilePath).read())
+            return data
+
+    except ValueError as e:
+        printMsg ("loadJsonFile",str(e),True)
+
+def checkInstallation():
+	global __docker_installed
+	global __aws_installed
+
+	if __checkDocker():
+		__docker_installed=True
+	else:
+		printMsg ("","###> Docker is not installed")
+		
+	if __checkAws():
+		__aws_installed=True
+	else:
+		printMsg ("","###> AWS is not installed")
+
+def __checkDocker():
+	import subprocess
+	printMsg("","Checking installation: DOCKER")
+	p = subprocess.Popen(['which', 'docker'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+	out, err = p.communicate()
+	if out:
+		printMsg("","--->OK")
+		return True
+
+def __checkAws():
+	import subprocess
+	printMsg("","Checking installation: AWS")
+	p = subprocess.Popen(['which', 'aws'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+	out, err = p.communicate()
+	if out:
+		printMsg("","--->OK")
+		return True
+
+def envVarHandling(kAws_region="",kAws_key="",kAws_secret=""):
+	import os
+	try:
+		printMsg("","Setting ENV Variables")
+		os.environ["AWS_DEFAULT_REGION"]  = kAws_region
+		os.environ["AWS_ACCESS_KEY_ID"]  = kAws_key
+		os.environ["AWS_SECRET_ACCESS_KEY"]  = kAws_secret
+
+	except ValueError as e:
+		printMsg ("envVarHandling",str(e),True)		
+
+
+def execTask(kConfig,kTask):
+	global __docker_installed
+	global __aws_installed	
+	try:
+		import subprocess
+		import os
+
+		S3Bucket=kTask["s3bucket"]
+		Path=kTask["path"]
+		S3Encrypt=kTask["s3_encrypt"]
+
+		#Check if container was specified
+		dockerContainer = (kTask["docker_container"] if 'docker_container' in kTask else "")
+		if dockerContainer:
+			if not __docker_installed:
+				printMsg ("","###> You specified a Docker container but Docker is not installed",True)
+			contDesc=" using Docker container => " + dockerContainer
+		else:
+			if not __aws_installed:
+				printMsg ("","###> You specified AWS CLI but AWS CLI is not installed",True)			
+			contDesc=" using AWS CLI"
+
+		printMsg("","Backing up " + Path + " to " + S3Bucket + contDesc)
+		Popen = subprocess.Popen
+
+		var1 = "AWS_DEFAULT_REGION="+kConfig["aws_region"]
+		var2 = "AWS_ACCESS_KEY_ID="+kConfig["aws_key"]
+		var3 = "AWS_SECRET_ACCESS_KEY="+kConfig["aws_secret"]
+
+		if dockerContainer:
+			s = Popen(['docker', 'run', '-ti', '-v',os.getcwd()+':/etc/docbrown', '-v',Path+':'+Path, "-e",var1, "-e",var2, "-e",var3,dockerContainer, "s3", "sync", Path, S3Bucket ])
+		else:
+			s = Popen(['aws', 's3', 'sync', Path,S3Bucket])
+
+		s.communicate()
+		
+		if s.returncode == 0:
+			return True
+		else:
+			printMsg ("execTask","Issue when executing a command --> " + Path + " - " + S3Bucket,True)
+
+	except ValueError as e:
+		printMsg ("execScript",str(e),True)			
+
+def main(kArgs):
+	try:
+		json = loadJsonFile(kArgs[0])
+
+		aws_region = json["aws_region"]
+		aws_key = json["aws_key"]
+		aws_secret = json["aws_secret"]
+
+		#Check installation AWS & Docker
+		checkInstallation()
+
+		#Set Env var
+		envVarHandling(aws_region,aws_key,aws_secret)
+
+		for task in json["tasks"]:
+			#Exec task
+			execTask(json,task)
+
+		printMsg ("","Process done!")
+
+	except ValueError as e:
+		printMsg ("execScript",str(e),True)		
+
+if __name__ == "__main__":
+	if len(sys.argv) > 1: #Check that a config file path was passed as arg
+		main(sys.argv[1:2])
