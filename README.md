@@ -1,7 +1,5 @@
 DocBrown - An utility that allow your file to go back in time ;-)
 
-![DocBrown L](http://rocklobby_media.s3.amazonaws.com/page_314d7298-a3ae-4046-be20-4e2a21149873_avatar.jpg "Doc Brown")
-
 An utility that allow your file to go back in time ;-)
 Infrastructure > DocBrown > docbrown.jpg
 
