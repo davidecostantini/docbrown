@@ -4,10 +4,33 @@ import sys
 __aws_installed=False
 __docker_installed=False
 
+class bcolors:
+    HEADER = '\033[95m'
+    OKCYAN = '\033[36m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
 def printMsg(kMsgCod,kMsgDesc,kQuit=False):
     import sys
+    from socket import gethostname
     from datetime import datetime
-    print datetime.now().strftime('%d-%m-%Y %H:%M:%S') + " [" + kMsgCod + "] " + kMsgDesc
+
+    text = "[" + gethostname() + "] " + datetime.now().strftime('%d-%m-%Y %H:%M:%S') 
+    if kMsgCod:
+    	text = text + " [" + kMsgCod + "] " 
+    text = text + " " + kMsgDesc
+
+    if kMsgDesc[:4] == "--->":
+        print bcolors.OKGREEN + text + bcolors.ENDC
+    elif kMsgDesc[:4] == "###>":
+        print bcolors.FAIL + text + bcolors.ENDC
+    else:
+        print bcolors.OKCYAN + text + bcolors.ENDC
+
     if kQuit:
         sys.exit(1)
 
@@ -20,7 +43,7 @@ def __checkFileExistence(kFileToCheck):
 	    return True
 
     except ValueError as e:
-        printMsg ("__checkFileExistence",str(e),True)	    
+        printMsg ("__checkFileExistence","###>"+str(e),True)	    
 
 def loadJsonFile(kFilePath):
     import json
@@ -30,7 +53,7 @@ def loadJsonFile(kFilePath):
             return data
 
     except ValueError as e:
-        printMsg ("loadJsonFile",str(e),True)
+        printMsg ("loadJsonFile","###>"+str(e),True)
 
 def checkInstallation():
 	global __docker_installed
@@ -64,6 +87,25 @@ def __checkAws():
 		printMsg("","--->OK")
 		return True
 
+def execCmd(kCmd):
+	from subprocess import Popen
+	try:
+		args =[]
+		for param in (kCmd.split()):
+			args.append(param)
+
+		# run cmd
+		s = Popen(args)
+
+		s.communicate()
+
+		if s.returncode == 0:
+			printMsg("","--->OK")
+			return True
+
+	except ValueError as e:
+		printMsg ("execCmd","###>"+str(e),True)
+
 def envVarHandling(kAws_region="",kAws_key="",kAws_secret=""):
 	import os
 	try:
@@ -71,9 +113,10 @@ def envVarHandling(kAws_region="",kAws_key="",kAws_secret=""):
 		os.environ["AWS_DEFAULT_REGION"]  = kAws_region
 		os.environ["AWS_ACCESS_KEY_ID"]  = kAws_key
 		os.environ["AWS_SECRET_ACCESS_KEY"]  = kAws_secret
+		printMsg("","--->OK")
 
 	except ValueError as e:
-		printMsg ("envVarHandling",str(e),True)		
+		printMsg ("envVarHandling","###>"+str(e),True)		
 
 
 def execTask(kConfig,kTask):
@@ -115,10 +158,10 @@ def execTask(kConfig,kTask):
 		if s.returncode == 0:
 			return True
 		else:
-			printMsg ("execTask","Issue when executing a command --> " + Path + " - " + S3Bucket,True)
+			printMsg ("execTask","###>Issue when executing a command --> " + Path + " - " + S3Bucket,True)
 
 	except ValueError as e:
-		printMsg ("execScript",str(e),True)			
+		printMsg ("execScript","###>"+str(e),True)
 
 def main(kArgs):
 	try:
@@ -135,14 +178,32 @@ def main(kArgs):
 		envVarHandling(aws_region,aws_key,aws_secret)
 
 		for task in json["tasks"]:
-			#Exec task
-			execTask(json,task)
+			error=False
+			#Check PRE task command
+			if task["pre_cmd_trigger"]:
+				printMsg ("","Found PRE sync trigger, Executing" + task["pre_cmd_trigger"])
+				error = not execCmd(task["pre_cmd_trigger"]) #If return true was successfully
 
-		printMsg ("","Process done!")
+			#Exec task
+			if not error:
+				execTask(json,task)
+				printMsg ("","--->SYNC completed!")
+
+			#Check POST task command
+			if task["post_cmd_trigger"] and [not error]:
+				printMsg ("","Found POST sync trigger, Executing" + task["post_cmd_trigger"])
+				error = not execCmd(task["post_cmd_trigger"]) #If return true was successfully
+
+		if error:
+			printMsg ("","###>Task completed with error!")
+		else:
+			printMsg ("","--->Task done!")
 
 	except ValueError as e:
-		printMsg ("execScript",str(e),True)		
+		printMsg ("execScript","###>"+str(e),True)		
 
 if __name__ == "__main__":
 	if len(sys.argv) > 1: #Check that a config file path was passed as arg
 		main(sys.argv[1:2])
+	else:
+		printMsg ("__main__","###>You must pass the config file as param",True)

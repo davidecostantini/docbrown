@@ -14,7 +14,7 @@ if [ "$answ" != "y" ]; then
 	exit
 fi
 
-git add * 
+git add . 
 
 git commit -m "$DESC"
 git push origin $branch_name
