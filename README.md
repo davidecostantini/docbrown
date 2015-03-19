@@ -1,5 +1,7 @@
 DocBrown - An utility that allow your file to go back in time ;-)
 
+![DocBrown L](http://rocklobby_media.s3.amazonaws.com/page_314d7298-a3ae-4046-be20-4e2a21149873_avatar.jpg "Doc Brown")
+
 An utility that allow your file to go back in time ;-)
 Infrastructure > DocBrown > docbrown.jpg
 
@@ -19,8 +21,6 @@ SOURCE CODE: https://github.com/infomentum/docbrown
 ==============
 The config file is a standard JSON, path must be specified as first parameter when you run script.
 Here an example:
-
-![DocBrown L](http://mentalfloss.com/sites/default/files/styles/article_640x430/public/marty-doc_12.jpg "Doc Brown")
 
 The three AWS parameters are just AWS credentials to access.
 Task is a list of element containing:
