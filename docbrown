@@ -116,7 +116,7 @@ def checkInstallation():
 	if __checkAws():
 		__aws_installed=True
 	else:
-		printMsg ("","###> AWS is not installed")
+		printMsg ("","###> AWS CLI is not installed")
 
 def __checkDocker():
 	import subprocess
