@@ -181,7 +181,7 @@ def main(kArgs):
 			error=False
 			#Check PRE task command
 			if task["pre_cmd_trigger"]:
-				printMsg ("","Found PRE sync trigger, Executing" + task["pre_cmd_trigger"])
+				printMsg ("","Found PRE sync trigger, Executing " + task["pre_cmd_trigger"])
 				error = not execCmd(task["pre_cmd_trigger"]) #If return true was successfully
 
 			#Exec task
@@ -191,7 +191,7 @@ def main(kArgs):
 
 			#Check POST task command
 			if task["post_cmd_trigger"] and [not error]:
-				printMsg ("","Found POST sync trigger, Executing" + task["post_cmd_trigger"])
+				printMsg ("","Found POST sync trigger, Executing " + task["post_cmd_trigger"])
 				error = not execCmd(task["post_cmd_trigger"]) #If return true was successfully
 
 		if error:
