@@ -2,10 +2,17 @@
 	"aws_region": "eu-west-1",
 	"aws_key": "",
 	"aws_secret": "",
+	"alert_mail_host": "",
+	"alert_mail_port": "465",
+	"alert_mail_ssl": "True",
+	"alert_mail_sender": "",
+	"alert_mail_dest": "",
+	"alert_mail_user": "",
+	"alert_mail_pwd": "",
 	"tasks":
 	[
 		{
-			"s3bucket": "s3://test-infomentum",
+			"s3bucket": "s3://test",
 			"path": "/etc/infomentum/loadtest/",
 			"s3_encrypt": 0,
 			"docker_container": "infomentum/awscli",

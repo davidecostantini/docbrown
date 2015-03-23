@@ -4,6 +4,15 @@ import sys
 __aws_installed=False
 __docker_installed=False
 
+__alert_mail_host=""
+__alert_mail_port=""
+__alert_mail_ssl=False
+__alert_mail_sender=""
+__alert_mail_dest=""
+__alert_mail_user=""
+__alert_mail_pwd=""
+
+
 class bcolors:
     HEADER = '\033[95m'
     OKCYAN = '\033[36m'
@@ -33,6 +42,46 @@ def printMsg(kMsgCod,kMsgDesc,kQuit=False):
 
     if kQuit:
         sys.exit(1)
+
+def sendMail(kTitle,kMessage):
+	global __alert_mail_host
+	global __alert_mail_port
+	global __alert_mail_ssl
+	global __alert_mail_sender
+	global __alert_mail_dest
+	global __alert_mail_user
+	global __alert_mail_pwd
+
+	import sys
+	import os
+	import re
+
+	from smtplib import SMTP_SSL       # this invokes the secure SMTP protocol (port 465, uses SSL)
+	from smtplib import SMTP                  # use this for standard SMTP protocol   (port 25, no encryption)
+	from email.MIMEText import MIMEText
+
+	try:
+	    msg = MIMEText(kMessage, 'plain')
+	    msg['Subject']= kTitle
+	    msg['From']   = __alert_mail_sender
+
+	    if __alert_mail_ssl:
+	        conn = SMTP_SSL(__alert_mail_host)
+	    else:
+	        conn = SMTP(__alert_mail_host)
+
+	    conn.set_debuglevel(False)
+	    conn.login(__alert_mail_user, __alert_mail_pwd)
+	    try:
+	    	printMsg ("sendMail","Sending alert email")	
+	        conn.sendmail(__alert_mail_sender, __alert_mail_dest, msg.as_string())
+	        printMsg ("sendMail","--->OK")
+
+	    finally:
+	        conn.close()
+
+	except ValueError as e:
+		printMsg ("__checkFileExistence","###>"+str(e))	
 
 def __checkFileExistence(kFileToCheck):
     import os
@@ -156,20 +205,37 @@ def execTask(kConfig,kTask):
 		s.communicate()
 		
 		if s.returncode == 0:
-			return True
+			return False
 		else:
-			printMsg ("execTask","###>Issue when executing a command --> " + Path + " - " + S3Bucket,True)
+			printMsg ("execTask","###>Issue when executing a command --> " + Path + " - " + S3Bucket,False)
+			return "Issue when executing a command --> " + Path + " - " + S3Bucket + " - Return status:" + str(s.returncode)
 
 	except ValueError as e:
 		printMsg ("execScript","###>"+str(e),True)
 
 def main(kArgs):
+	global __alert_mail_host
+	global __alert_mail_port
+	global __alert_mail_ssl
+	global __alert_mail_sender
+	global __alert_mail_dest
+	global __alert_mail_user
+	global __alert_mail_pwd
+
 	try:
 		json = loadJsonFile(kArgs[0])
 
 		aws_region = json["aws_region"]
 		aws_key = json["aws_key"]
 		aws_secret = json["aws_secret"]
+
+		__alert_mail_host = json["alert_mail_host"]
+		__alert_mail_port = json["alert_mail_port"]
+		__alert_mail_ssl = json["alert_mail_ssl"]
+		__alert_mail_sender = json["alert_mail_sender"]
+		__alert_mail_dest = json["alert_mail_dest"]
+		__alert_mail_user = json["alert_mail_user"]
+		__alert_mail_pwd = json["alert_mail_pwd"]
 
 		#Check installation AWS & Docker
 		checkInstallation()
@@ -186,8 +252,9 @@ def main(kArgs):
 
 			#Exec task
 			if not error:
-				execTask(json,task)
-				printMsg ("","--->SYNC completed!")
+				error = execTask(json,task)
+				if not error:
+					printMsg ("","--->SYNC completed!")
 
 			#Check POST task command
 			if task["post_cmd_trigger"] and [not error]:
@@ -196,6 +263,10 @@ def main(kArgs):
 
 		if error:
 			printMsg ("","###>Task completed with error!")
+
+			#If specified send alert email
+			if __alert_mail_host and error:
+				sendMail("DocBrown - ERROR", error)
 		else:
 			printMsg ("","--->Task done!")
 
