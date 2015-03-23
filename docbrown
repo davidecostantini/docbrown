@@ -66,9 +66,9 @@ def sendMail(kTitle,kMessage):
 	    msg['From']   = __alert_mail_sender
 
 	    if __alert_mail_ssl:
-	        conn = SMTP_SSL(__alert_mail_host)
+	        conn = SMTP_SSL(__alert_mail_host,__alert_mail_port)
 	    else:
-	        conn = SMTP(__alert_mail_host)
+	        conn = SMTP(__alert_mail_host,__alert_mail_port)
 
 	    conn.set_debuglevel(False)
 	    conn.login(__alert_mail_user, __alert_mail_pwd)
@@ -211,7 +211,8 @@ def execTask(kConfig,kTask):
 			return "Issue when executing a command --> " + Path + " - " + S3Bucket + " - Return status:" + str(s.returncode)
 
 	except ValueError as e:
-		printMsg ("execScript","###>"+str(e),True)
+		printMsg ("execTask","###>"+str(e),True)
+		return "Issue when executing a command --> " + Path + " - " + S3Bucket + " - Error:" + str(e)
 
 def main(kArgs):
 	global __alert_mail_host
@@ -271,7 +272,7 @@ def main(kArgs):
 			printMsg ("","--->Task done!")
 
 	except ValueError as e:
-		printMsg ("execScript","###>"+str(e),True)		
+		printMsg ("main","###>"+str(e),True)		
 
 if __name__ == "__main__":
 	if len(sys.argv) > 1: #Check that a config file path was passed as arg
