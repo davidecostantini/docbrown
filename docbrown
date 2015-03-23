@@ -257,7 +257,7 @@ def main(kArgs):
 					printMsg ("","--->SYNC completed!")
 
 			#Check POST task command
-			if task["post_cmd_trigger"] and [not error]:
+			if task["post_cmd_trigger"] and (not error):
 				printMsg ("","Found POST sync trigger, Executing " + task["post_cmd_trigger"])
 				error = not execCmd(task["post_cmd_trigger"]) #If return true was successfully
 
