@@ -56,8 +56,7 @@ def sendMail(kTitle,kMessage):
 	import os
 	import re
 
-	from smtplib import SMTP_SSL       # this invokes the secure SMTP protocol (port 465, uses SSL)
-	from smtplib import SMTP                  # use this for standard SMTP protocol   (port 25, no encryption)
+	from smtplib import SMTP
 	from email.MIMEText import MIMEText
 
 	try:
@@ -65,13 +64,21 @@ def sendMail(kTitle,kMessage):
 	    msg['Subject']= kTitle
 	    msg['From']   = __alert_mail_sender
 
+	    #Using SSL
 	    if __alert_mail_ssl:
-	        conn = SMTP_SSL(__alert_mail_host,__alert_mail_port)
+	    	if sys.version_info < (2, 6):
+	    		conn = SMTP(__alert_mail_host,__alert_mail_port)
+	    	else:
+	    		conn = SMTP(__alert_mail_host)
+	        
+	        	conn.starttls()
+	        	conn.ehlo()
+	        	conn.login(__alert_mail_user, __alert_mail_pwd)
 	    else:
-	        conn = SMTP(__alert_mail_host,__alert_mail_port)
+	        conn = SMTP(__alert_mail_host)
 
 	    conn.set_debuglevel(False)
-	    conn.login(__alert_mail_user, __alert_mail_pwd)
+
 	    try:
 	    	printMsg ("sendMail","Sending alert email")	
 	        conn.sendmail(__alert_mail_sender, __alert_mail_dest, msg.as_string())
@@ -81,7 +88,11 @@ def sendMail(kTitle,kMessage):
 	        conn.close()
 
 	except ValueError as e:
-		printMsg ("__checkFileExistence","###>"+str(e))	
+		printMsg ("sendMail","###>"+str(e))		
+
+def __checkFolderExistence(kFolderToCheck):
+	import os
+	return os.path.isdir(kFolderToCheck)
 
 def __checkFileExistence(kFileToCheck):
     import os
@@ -116,7 +127,7 @@ def checkInstallation():
 	if __checkAws():
 		__aws_installed=True
 	else:
-		printMsg ("","###> AWS CLI is not installed")
+		printMsg ("","###> AWS is not installed")
 
 def __checkDocker():
 	import subprocess
@@ -198,7 +209,8 @@ def execTask(kConfig,kTask):
 		var3 = "AWS_SECRET_ACCESS_KEY="+kConfig["aws_secret"]
 
 		if dockerContainer:
-			s = Popen(['docker', 'run', '-ti', '-v',os.getcwd()+':/etc/docbrown', '-v',Path+':'+Path, "-e",var1, "-e",var2, "-e",var3,dockerContainer, "s3", "sync", Path, S3Bucket ])
+			#Added privileged mode to avoid issue when SELInux is enabled
+			s = Popen(['docker', 'run', '-ti', '--privileged=true', '-v',os.getcwd()+':/etc/docbrown', '-v',Path+':'+Path, "-e",var1, "-e",var2, "-e",var3,dockerContainer, "s3", "sync", Path, S3Bucket ])
 		else:
 			s = Popen(['aws', 's3', 'sync', Path,S3Bucket])
 
@@ -250,6 +262,11 @@ def main(kArgs):
 			if task["pre_cmd_trigger"]:
 				printMsg ("","Found PRE sync trigger, Executing " + task["pre_cmd_trigger"])
 				error = not execCmd(task["pre_cmd_trigger"]) #If return true was successfully
+
+			#Check if folder to sync exist
+			if not __checkFolderExistence(task["path"]):
+				error = "Folder " + task["path"] + " does not exist!"
+				printMsg ("","###>"+error)
 
 			#Exec task
 			if not error:
