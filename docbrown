@@ -279,14 +279,14 @@ def main(kArgs):
 				printMsg ("","Found POST sync trigger, Executing " + task["post_cmd_trigger"])
 				error = not execCmd(task["post_cmd_trigger"]) #If return true was successfully
 
-		if error:
-			printMsg ("","###>Task completed with error!")
+			if error:
+				printMsg ("","###>Task completed with error!")
 
-			#If specified send alert email
-			if __alert_mail_host and error:
-				sendMail("DocBrown - ERROR", error)
-		else:
-			printMsg ("","--->Task done!")
+				#If specified send alert email
+				if __alert_mail_host and error:
+					sendMail("DocBrown - ERROR", error)
+			else:
+				printMsg ("","--->Task done!")
 
 	except ValueError as e:
 		printMsg ("main","###>"+str(e),True)		
