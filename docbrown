@@ -210,7 +210,7 @@ def execTask(kConfig,kTask):
 
 		if dockerContainer:
 			#Added privileged mode to avoid issue when SELInux is enabled
-			s = Popen(['docker', 'run', '-ti', '--privileged=true', '-v',os.getcwd()+':/etc/docbrown', '-v',Path+':'+Path, "-e",var1, "-e",var2, "-e",var3,dockerContainer, "s3", "sync", Path, S3Bucket ])
+			s = Popen(['docker', 'run', '-ti', '--privileged=true', '-v',Path+':'+Path, "-e",var1, "-e",var2, "-e",var3, dockerContainer, "s3", "sync", Path, S3Bucket ])
 		else:
 			s = Popen(['aws', 's3', 'sync', Path,S3Bucket])
 
