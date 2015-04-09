@@ -32,5 +32,5 @@ Task is a list of element containing:
 
 ## RUN
 To execute the application, once you've filled the config file, just execute this command:
-./s3sync.py <config_path>
+./docbrown <config_path>
 
