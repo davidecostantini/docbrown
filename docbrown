@@ -201,18 +201,22 @@ def execTask(kConfig,kTask):
 				printMsg ("","###> You specified AWS CLI but AWS CLI is not installed",True)			
 			contDesc=" using AWS CLI"
 
+			#Set Env var
+			envVarHandling(kConfig["aws_region"], kConfig["aws_key"], kConfig["aws_secret"])			
+
+
 		printMsg("","Backing up " + Path + " to " + S3Bucket + contDesc)
 		Popen = subprocess.Popen
 
-		var1 = "AWS_DEFAULT_REGION="+kConfig["aws_region"]
-		var2 = "AWS_ACCESS_KEY_ID="+kConfig["aws_key"]
-		var3 = "AWS_SECRET_ACCESS_KEY="+kConfig["aws_secret"]
-
 		if dockerContainer:
+			var1 = "AWS_DEFAULT_REGION="+kConfig["aws_region"]
+			var2 = "AWS_ACCESS_KEY_ID="+kConfig["aws_key"]
+			var3 = "AWS_SECRET_ACCESS_KEY="+kConfig["aws_secret"]
+
 			#Added privileged mode to avoid issue when SELInux is enabled
 			s = Popen(['docker', 'run', '-ti', '--privileged=true', '-v',Path+':'+Path, "-e",var1, "-e",var2, "-e",var3, dockerContainer, "s3", "sync", Path, S3Bucket ])
 		else:
-			s = Popen(['aws', 's3', 'sync', Path,S3Bucket])
+			s = Popen(['aws', 's3', 'sync', Path, S3Bucket])
 
 		s.communicate()
 		
@@ -252,9 +256,6 @@ def main(kArgs):
 
 		#Check installation AWS & Docker
 		checkInstallation()
-
-		#Set Env var
-		envVarHandling(aws_region,aws_key,aws_secret)
 
 		for task in json["tasks"]:
 			error=False

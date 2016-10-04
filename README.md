@@ -6,14 +6,14 @@ Infrastructure > DocBrown > docbrown.jpg
 ## DESCRIPTION
 ==============
 This is a new tool to synchronize a folder with AWS S3.
-The app is written in Python and is can work with a local copy of AWS or a Docker AWS CLI container (also developed by us, please have a look to the corresponding section in Confluence)
+The app is written in Python to interact with AWS it use either a local copy of AWS CLI or a Docker AWS CLI container (also developed by us, please have a look at https://github.com/davidecostantini/awscli)
 It will check if AWS CLI and Docker are installed at every run.
-To store the log just route the stout to a file on crontab.
+To store the log just route the stout to a file.
 
 ## SOURCE
 ==============
 LANGUAGE: python
-SOURCE CODE: https://github.com/infomentum/docbrown
+SOURCE CODE: https://github.com/davidecostantini/docbrown
 
 ## CONFIG FILE
 ==============
@@ -32,5 +32,5 @@ Task is a list of element containing:
 
 ## RUN
 To execute the application, once you've filled the config file, just execute this command:
-./docbrown <config_path>
+./docbrown config_file
 
