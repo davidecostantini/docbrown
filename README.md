@@ -25,6 +25,7 @@ Task is a list of element containing:
 
 * s3bucker => Bucket name where store files (string)
 * Path => Path to synchronize (string)
+* remove_deleted => Files that exist in the destination but not in the source are deleted during sync.
 * s3_encrypt => Set if files must be encrypted when uploaded (bool) ############# ACTUALLY NOT IMPLEMENTED #############
 * docker_container => Full container name (string) [not mandatory]
 * pre_cmd_trigger => Script to execute BEFORE sync process (string) [not mandatory]

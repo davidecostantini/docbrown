@@ -188,7 +188,7 @@ def execTask(kConfig,kTask):
 
 		S3Bucket=kTask["s3bucket"]
 		Path=kTask["path"]
-		S3Encrypt=kTask["s3_encrypt"]
+		S3Encrypt=bool(kTask["s3_encrypt"])
 
 		#Check if container was specified
 		dockerContainer = (kTask["docker_container"] if 'docker_container' in kTask else "")
@@ -214,9 +214,15 @@ def execTask(kConfig,kTask):
 			var3 = "AWS_SECRET_ACCESS_KEY="+kConfig["aws_secret"]
 
 			#Added privileged mode to avoid issue when SELInux is enabled
-			s = Popen(['docker', 'run', '-ti', '--privileged=true', '-v',Path+':'+Path, "-e",var1, "-e",var2, "-e",var3, dockerContainer, "s3", "sync", Path, S3Bucket ])
+			params = ['docker', 'run', '-ti', '--privileged=true', '-v',Path+':'+Path, "-e",var1, "-e",var2, "-e",var3, dockerContainer, "s3", "sync", Path, S3Bucket ]
+
 		else:
-			s = Popen(['aws', 's3', 'sync', Path, S3Bucket])
+			params = ['aws', 's3', 'sync', Path, S3Bucket]
+
+			if bool(kTask["remove_deleted"]):
+				params.append("--delete")
+
+		s = Popen(params)
 
 		s.communicate()
 		
