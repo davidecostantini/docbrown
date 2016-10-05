@@ -56,36 +56,44 @@ def sendMail(kTitle,kMessage):
 	import os
 	import re
 
+	from socket import gethostname
+	from datetime import datetime
 	from smtplib import SMTP
 	from email.MIMEText import MIMEText
 
 	try:
-	    msg = MIMEText(kMessage, 'plain')
-	    msg['Subject']= kTitle
-	    msg['From']   = __alert_mail_sender
+		#Compiling message
+		mail_msg = "Server: " + gethostname() + "\n"
+		mail_msg += "Date: " + datetime.now().strftime('%d-%m-%Y %H:%M:%S') + "\n"
+		mail_msg += "Error: " + str(kMessage) + "\n"
 
-	    #Using SSL
-	    if __alert_mail_ssl:
-	    	if sys.version_info < (2, 6):
-	    		conn = SMTP(__alert_mail_host,__alert_mail_port)
-	    	else:
-	    		conn = SMTP(__alert_mail_host)
-	        
-	        	conn.starttls()
-	        	conn.ehlo()
-	        	conn.login(__alert_mail_user, __alert_mail_pwd)
-	    else:
-	        conn = SMTP(__alert_mail_host)
 
-	    conn.set_debuglevel(False)
+		msg = MIMEText(mail_msg, 'plain')
+		msg['Subject']= kTitle
+		msg['From']   = __alert_mail_sender
 
-	    try:
-	    	printMsg ("sendMail","Sending alert email")	
-	        conn.sendmail(__alert_mail_sender, __alert_mail_dest, msg.as_string())
-	        printMsg ("sendMail","--->OK")
+		#Using SSL
+		if __alert_mail_ssl:
+			if sys.version_info < (2, 6):
+				conn = SMTP(__alert_mail_host,__alert_mail_port)
+			else:
+				conn = SMTP(__alert_mail_host)
+			
+				conn.starttls()
+				conn.ehlo()
+				conn.login(__alert_mail_user, __alert_mail_pwd)
+		else:
+			conn = SMTP(__alert_mail_host)
 
-	    finally:
-	        conn.close()
+		conn.set_debuglevel(False)
+
+		try:
+			printMsg ("sendMail","Sending alert email")	
+			conn.sendmail(__alert_mail_sender, __alert_mail_dest, msg.as_string())
+			printMsg ("sendMail","--->OK")
+
+		finally:
+			conn.close()
 
 	except ValueError as e:
 		printMsg ("sendMail","###>"+str(e))		
@@ -148,23 +156,26 @@ def __checkAws():
 		return True
 
 def execCmd(kCmd):
-	from subprocess import Popen
+	from subprocess import Popen, PIPE, STDOUT
+
 	try:
-		args =[]
-		for param in (kCmd.split()):
-			args.append(param)
-
 		# run cmd
-		s = Popen(args)
+		p = Popen(kCmd, shell=True, stdin=PIPE, stdout=PIPE, stderr=STDOUT, close_fds=True)
+		
+		stdout = p.stdout.read()
+		p.communicate()[0]
 
-		s.communicate()
+		rc = p.returncode
 
-		if s.returncode == 0:
+		if rc == 0:
 			printMsg("","--->OK")
-			return True
+			return ""
+		else:
+			raise Exception
 
-	except ValueError as e:
-		printMsg ("execCmd","###>"+str(e),True)
+	except:
+		printMsg ("execCmd","###> Exit: " + str(rc) + " - Stdout: " + stdout,False)
+		return "Exit: " + str(rc) + " - Stdout: " + stdout
 
 def envVarHandling(kAws_region="",kAws_key="",kAws_secret=""):
 	import os
@@ -226,11 +237,11 @@ def execTask(kConfig,kTask):
 
 		s.communicate()
 		
-		if s.returncode == 0:
-			return False
-		else:
+		if s.returncode <> 0:
 			printMsg ("execTask","###>Issue when executing a command --> " + Path + " - " + S3Bucket,False)
 			return "Issue when executing a command --> " + Path + " - " + S3Bucket + " - Return status:" + str(s.returncode)
+		else:
+			return ""
 
 	except ValueError as e:
 		printMsg ("execTask","###>"+str(e),True)
@@ -263,35 +274,43 @@ def main(kArgs):
 		#Check installation AWS & Docker
 		checkInstallation()
 
+		output=""
+		errors=""
 		for task in json["tasks"]:
-			error=False
 			#Check PRE task command
 			if task["pre_cmd_trigger"]:
 				printMsg ("","Found PRE sync trigger, Executing " + task["pre_cmd_trigger"])
-				error = not execCmd(task["pre_cmd_trigger"]) #If return true was successfully
+				output = execCmd(task["pre_cmd_trigger"])
+				if output <> "":
+					errors += "\n" + output
 
 			#Check if folder to sync exist
 			if not __checkFolderExistence(task["path"]):
-				error = "Folder " + task["path"] + " does not exist!"
-				printMsg ("","###>"+error)
+				output = "Folder " + task["path"] + " does not exist!"
+				if output <> "":
+					errors += "\n" + output
+				printMsg ("","###>"+output)
 
 			#Exec task
-			if not error:
-				error = execTask(json,task)
-				if not error:
-					printMsg ("","--->SYNC completed!")
+			output = execTask(json,task)
+			if output <> "":
+				errors += "\n" + output
+			else:
+				printMsg ("","--->SYNC completed!")
 
 			#Check POST task command
 			if task["post_cmd_trigger"] and (not error):
 				printMsg ("","Found POST sync trigger, Executing " + task["post_cmd_trigger"])
-				error = not execCmd(task["post_cmd_trigger"]) #If return true was successfully
+				output = execCmd(task["post_cmd_trigger"]) #If return true was successfully
+				if output <> "":
+					errors += "\n" + output
 
-			if error:
+			if errors:
 				printMsg ("","###>Task completed with error!")
 
 				#If specified send alert email
-				if __alert_mail_host and error:
-					sendMail("DocBrown - ERROR", error)
+				if __alert_mail_host and errors:
+					sendMail("DocBrown - ERROR", errors)
 			else:
 				printMsg ("","--->Task done!")
 
